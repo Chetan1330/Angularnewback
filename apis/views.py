@@ -108,7 +108,7 @@ print("Base dir is:",BASE_DIR)
 
 
 ################################ Robustness  ######################################
-def analyse(model, train_data, test_data, config, factsheet):
+def analyse_robustness(model, train_data, test_data, config, factsheet):
     import numpy as np
     import collections
     import random
@@ -184,13 +184,13 @@ path_module=os.path.join(BASE_DIR,'apis/TestValues/model.pkl')
 path_factsheet=os.path.join(BASE_DIR,'apis/TestValues/factsheet.json')
 # path_mapping_accountabiltiy=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/Accountability/default.json')
 path_mapping_fairness=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/robustness/default.json')
-print("Robustness reslt:",analyse(path_module,path_traindata,path_testdata,path_mapping_fairness,path_factsheet))
+print("Robustness reslt:",analyse_robustness(path_module,path_traindata,path_testdata,path_mapping_fairness,path_factsheet))
 print("############################################################################")
 ###########################################################################################
 
 ########################### Fairness ###############################################
 
-def analyse(model, training_dataset, test_dataset, factsheet, config):
+def analyse_fairness(model, training_dataset, test_dataset, factsheet, config):
     import numpy as np
     np.random.seed(0)
     from scipy.stats import chisquare
@@ -265,12 +265,12 @@ path_module=os.path.join(BASE_DIR,'apis/TestValues/model.pkl')
 path_factsheet=os.path.join(BASE_DIR,'apis/TestValues/factsheet.json')
 # path_mapping_accountabiltiy=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/Accountability/default.json')
 path_mapping_fairness=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/fairness/default.json')
-print("Fairness reslt:", analyse(path_module,path_traindata,path_testdata,path_factsheet,path_mapping_fairness))
+print("Fairness reslt:", analyse_fairness(path_module,path_traindata,path_testdata,path_factsheet,path_mapping_fairness))
 print("############################################################################")
 
 ###############################################################################
 
-def analyse(clf, train_data, test_data, config, factsheet):
+def analyse_explainability(clf, train_data, test_data, config, factsheet):
     import numpy as np
     import pandas as pd
     import json
@@ -325,11 +325,11 @@ path_module=os.path.join(BASE_DIR,'apis/TestValues/model.pkl')
 path_factsheet=os.path.join(BASE_DIR,'apis/TestValues/factsheet.json')
 # path_mapping_accountabiltiy=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/Accountability/default.json')
 path_mapping_fairness=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/explainability/default.json')
-print("Explainability reslt:", analyse(path_module,path_traindata,path_testdata, path_mapping_fairness, path_factsheet))
+print("Explainability reslt:", analyse_explainability(path_module,path_traindata,path_testdata, path_mapping_fairness, path_factsheet))
 print("############################################################################")
 
 
-def analyse(model, training_dataset, test_dataset, factsheet, methodology_config):
+def analyse_methodology(model, training_dataset, test_dataset, factsheet, methodology_config):
     import collections
     info = collections.namedtuple('info', 'description value')
     import json
@@ -381,106 +381,109 @@ path_traindata=os.path.join(BASE_DIR,'apis/TestValues/train.csv')
 path_module=os.path.join(BASE_DIR,'apis/TestValues/model.pkl')
 path_factsheet=os.path.join(BASE_DIR,'apis/TestValues/factsheet.json')
 path_mapping_accountabiltiy=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/Accountability/default.json')
-print("Accountability reslt:", analyse(path_module,path_traindata,path_testdata,path_factsheet,path_mapping_accountabiltiy))
+print("Accountability reslt:", analyse_methodology(path_module,path_traindata,path_testdata,path_factsheet,path_mapping_accountabiltiy))
 print("############################################################################")
 
 
 
+def get_final_score(model, train_data, test_data, config_weights, mappings_config, factsheet, recalc=False):
+    mappingConfig1 = mappings_config
+
+    with open(mappings_config, 'r') as f:
+        mappings_config = json.loads(f.read())
+
+    config_fairness = mappings_config["fairness"]
+    config_explainability = mappings_config["explainability"]
+    config_robustness = mappings_config["robustness"]
+    config_methodology = mappings_config["methodology"]
 
 
-from sklearn import metrics
-import numpy as np
-import tensorflow as tf
+    methodology_config=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/Accountability/default.json')
+    config_explainability=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/explainability/default.json')
+    config_fairness=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/fairness/default.json')
+    config_robustness=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/robustness/default.json')
 
-DEFAULT_TARGET_COLUMN_INDEX = -1
-DEFAULT_TARGET_COLUMN_NAME = 'Target'
-import pandas as pd
+    def trusting_AI_scores(model, train_data, test_data, factsheet, config_fairness, config_explainability, config_robustness, methodology_config):
+    # if "scores" in factsheet.keys() and "properties" in factsheet.keys():
+    #     scores = factsheet["scores"]
+    #     properties = factsheet["properties"]
+    # else:
+        output = dict(
+            fairness       = analyse_fairness(model, train_data, test_data, factsheet, config_fairness),
+            explainability = analyse_explainability(model, train_data, test_data, config_explainability, factsheet),
+            robustness     = analyse_robustness(model, train_data, test_data, config_robustness, factsheet),
+            methodology    = analyse_methodology(model, train_data, test_data, factsheet, methodology_config)
+        )
+        scores = dict((k, v.score) for k, v in output.items())
+        properties = dict((k, v.properties) for k, v in output.items())
+        # factsheet["scores"] = scores
+        # factsheet["properties"] = properties
+        # write_into_factsheet(factsheet, solution_set_path)
+    
+        return  result(score=scores, properties=properties)
 
-def get_performance_metrics(model, test_data, target_column):
-    model=pd.read_pickle(model)
-    test_data=pd.read_csv(test_data)
-
-    y_test = test_data[target_column]
-    y_true = y_test.values.flatten()
-
-    if target_column:
-        X_test = test_data.drop(target_column, axis=1)
-        y_test = test_data[target_column]
+    with open(mappingConfig1, 'r') as f:
+        default_map = json.loads(f.read())
+    
+    with open(factsheet, 'r') as g:
+        factsheet = json.loads(g.read())
+    #print("mapping is default:")
+    #print(default_map == mappings_config)
+    if default_map == mappings_config:
+        if "scores" in factsheet.keys() and "properties" in factsheet.keys() and not recalc:
+            scores = factsheet["scores"]
+            properties = factsheet["properties"]
     else:
-        X_test = test_data.iloc[:,:DEFAULT_TARGET_COLUMN_INDEX]
-        y_test = test_data.reset_index(drop=True).iloc[:,DEFAULT_TARGET_COLUMN_INDEX:]
-        y_true = y_test.values.flatten()
-    if (isinstance(model, tf.keras.Sequential)):
-        y_pred_proba = model.predict(X_test)
-        y_pred = np.argmax(y_pred_proba, axis=1)
-    else:
-        y_pred = model.predict(X_test).flatten()
-        labels = np.unique(np.array([y_pred,y_true]).flatten())
+        result = trusting_AI_scores(model, train_data, test_data, factsheet, config_fairness, config_explainability, config_robustness, config_methodology)
+        scores = result.score
+        factsheet["scores"] = scores
+        properties = result.properties
+        factsheet["properties"] = properties
+    # try:
+    #     write_into_factsheet(factsheet, solution_set_path)
+    # except Exception as e:
+    #     print("ERROR in write_into_factsheet: {}".format(e))
+    # else:
+    #     result = trusting_AI_scores(model, train_data, test_data, factsheet, config_fairness, config_explainability, config_robustness, config_methodology, solution_set_path)
+    #     scores = result.score
+    #     properties = result.properties
 
-    performance_metrics = pd.DataFrame({
-    "accuracy" : [metrics.accuracy_score(y_true, y_pred)],
-    "global recall" : [metrics.recall_score(y_true, y_pred, labels=labels, average="micro")],
-    "class weighted recall" : [metrics.recall_score(y_true, y_pred,average="weighted")],
-    "global precision" : [metrics.precision_score(y_true, y_pred, labels=labels, average="micro")],
-    "class weighted precision" : [metrics.precision_score(y_true, y_pred,average="weighted")],
-    "global f1 score" : [metrics.f1_score(y_true, y_pred,average="micro")],
-    "class weighted f1 score" : [metrics.f1_score(y_true, y_pred,average="weighted")],
-    }).round(decimals=2)
+    final_scores = dict()
+    # scores = tuple(scores)
+    print("Scores is:", scores)
+    with open(config_weights, 'r') as n:
+        config_weights = json.loads(n.read())
 
-    performance_metrics = performance_metrics.transpose()
-    performance_metrics = performance_metrics.reset_index()
-    performance_metrics['index'] = performance_metrics['index'].str.title()
-    performance_metrics.rename(columns={"index":"key", 0:"value"}, inplace=True)
+    # configdict = {}
+    # print("Config weight:",config_weights)
 
-    # print("Performance Metrics:", performance_metrics)
-    return performance_metrics
+    # for pillar in scores.items():
+    #     # print("Pillars:", dict(pillar)
+    #     config = config_weights[pillar]
+    #     weighted_scores = list(map(lambda x: scores[pillar][x] * config[x], scores[pillar].keys()))
+    #     sum_weights = np.nansum(np.array(list(config.values()))[~np.isnan(weighted_scores)])
+    # if sum_weights == 0:
+    #     result = 0
+    # else:
+    #     result = round(np.nansum(weighted_scores)/sum_weights,1)
+    #     final_scores[pillar] = result
+
+    return scores, properties
+
 
 path_testdata=os.path.join(BASE_DIR,'apis/TestValues/test.csv')
 path_traindata=os.path.join(BASE_DIR,'apis/TestValues/train.csv')
 path_module=os.path.join(BASE_DIR,'apis/TestValues/model.pkl')
 path_factsheet=os.path.join(BASE_DIR,'apis/TestValues/factsheet.json')
+config_weights=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Weights/default.json')
+mappings_config=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/default.json')
+factsheet=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/default.json')
+# solution_set_path,
 # path_mapping_accountabiltiy=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/Accountability/default.json')
 # path_mapping_fairness=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/explainability/default.json')
-print("Performance_Metrics reslt:", get_performance_metrics(path_module,path_testdata, 'Target'))
-
-# path_testdata=os.path.join(BASE_DIR,'apis/TestValues/test.csv')
-# path_traindata=os.path.join(BASE_DIR,'apis/TestValues/train.csv')
-# path_module=os.path.join(BASE_DIR,'apis/TestValues/model.pkl')
-# path_factsheet=os.path.join(BASE_DIR,'apis/TestValues/factsheet.json')
-# # path_mapping_accountabiltiy=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/Accountability/default.json')
-# path_mapping_fairness=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/explainability/default.json')
-# print(analyse(path_module,path_traindata,path_testdata, path_mapping_fairness, path_factsheet))
-
-# print("Properties:",properties)
-# print("Score:",score)
-# return result(score=score, properties=properties)
-
-    # return result(score=np.nan, properties={})
-# print("Properties:",properties)
-# print("Score:",score)
-
-# return result(score=score, properties=properties)
+print("Final Score result:", get_final_score(path_module, path_traindata, path_testdata, config_weights, mappings_config, path_factsheet))
 
 
-# @api_view(['POST'])
-# def registerUser(request):
-#     data = request.data
-
-#     print(data, 'data')
-
-#     try:
-#         user, created = CustomUser.objects.get_or_create(
-#             user_id=data['id'],
-#             first_name=data['name'],
-#             username=data['name'],
-#             email=data['email'],
-#             picture=data['picture']
-#         )
-#         return Response("Successfully add!")
-#     except:
-#         message = {'detail': 'User with this email already exists'}
-#         return Response(message, status=status.HTTP_400_BAD_REQUEST)
-# # This is your test secret API key.
 
 @csrf_exempt
 def create_checkout_session(request):
@@ -966,10 +969,11 @@ class analyze(APIView):
             path_module=os.path.join(BASE_DIR,'apis/TestValues/model.pkl')
             path_traindata=os.path.join(BASE_DIR,'apis/TestValues/train.csv')
             path_factsheet=os.path.join(BASE_DIR,'apis/TestValues/factsheet.json')
+            mappings_config=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/default.json')
             
             if scenarioobj:
                 for i in scenarioobj:
-                    if i.ScenarioName == request.data['SelectScenario'] and i.SolutionName == request.data['SelectSolution1']:
+                    if i.ScenarioName == request.data['SelectScenario'] and i.SolutionName == request.data['SelectSolution']:
                         path_testdata=i.TestFile
                         path_module=i.ModelFile
                         path_traindata=i.TrainingFile
@@ -980,6 +984,64 @@ class analyze(APIView):
 
             print("Performance_Metrics reslt:", get_performance_metrics(path_module,path_testdata, 'Target', path_traindata, path_factsheet))
             
+
+
+            def get_factsheet_completeness_score(factsheet):
+                propdic = {}
+                import collections
+                info = collections.namedtuple('info', 'description value')
+                result = collections.namedtuple('result', 'score properties')
+
+                factsheet=os.path.join(BASE_DIR,'media/' + str(factsheet))
+                with open(factsheet, 'r') as g:
+                    factsheet = json.loads(g.read())
+
+                score = 0
+                properties= {"dep" :info('Depends on','Factsheet')}
+                GENERAL_INPUTS = ["model_name", "purpose_description", "domain_description", "training_data_description", "model_information", "authors", "contact_information"]
+
+                n = len(GENERAL_INPUTS)
+                ctr = 0
+                for e in GENERAL_INPUTS:
+                    if "general" in factsheet and e in factsheet["general"]:
+                        ctr+=1
+                        properties[e] = info("Factsheet Property {}".format(e.replace("_"," ")), "present")
+                    else:
+                        properties[e] = info("Factsheet Property {}".format(e.replace("_"," ")), "missing")
+                        score = round(ctr/n*5)
+                
+                
+                return result(score=score, properties=properties)
+
+            # print("Factsheet_completeness Score result:", get_factsheet_completeness_score(path_module, path_traindata, path_testdata, path_factsheet, mappings_config))
+            
+            path_testdata=os.path.join(BASE_DIR,'apis/TestValues/test.csv')
+            path_module=os.path.join(BASE_DIR,'apis/TestValues/model.pkl')
+            path_traindata=os.path.join(BASE_DIR,'apis/TestValues/train.csv')
+            path_factsheet=os.path.join(BASE_DIR,'apis/TestValues/factsheet.json')
+            mappings_config=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/default.json')
+            
+            if scenarioobj:
+                for i in scenarioobj:
+                    if i.ScenarioName == request.data['SelectScenario'] and i.SolutionName == request.data['SelectSolution']:
+                        path_testdata=i.TestFile
+                        path_module=i.ModelFile
+                        path_traindata=i.TrainingFile
+                        path_factsheet=i.FactsheetFile
+                        Target = i.Targetcolumn
+                        print("Factsheet file:", i.FactsheetFile)
+                        print("ScenarioSolution data:", i.SolutionName)
+
+            completeness_prop = get_factsheet_completeness_score(path_factsheet)
+            # print("completeness Score:######", completeness_prop[1]['model_name'][1])
+            # print("completeness Score:######", completeness_prop[1]['model_name'][1])
+
+            uploaddic['modelname'] = completeness_prop[1]['model_name'][1]
+            uploaddic['purposedesc'] = completeness_prop[1]['purpose_description'][1]
+            uploaddic['trainingdatadesc'] = completeness_prop[1]['training_data_description'][1]
+            uploaddic['modelinfo'] = completeness_prop[1]['model_information'][1]
+            uploaddic['authors'] = completeness_prop[1]['authors'][1]
+            uploaddic['contactinfo'] = completeness_prop[1]['contact_information'][1]
 
             # def get_properties_section(train_data, test_data, factsheet):
             #     import pandas as pd
@@ -1076,7 +1138,7 @@ class compare(APIView):
             userexist = ScenarioUser.objects.get(user_id=request.data['Userid'])
             scenario = userexist.Scenario.all()
             scenarioobj = userexist.scenariosolution.filter(ScenarioName=request.data['Userid'])
-            # scenarioobj = userexist.scenariosolution.all()
+            scenarioobj1 = userexist.scenariosolution.all()
 
             from sklearn import metrics
             import numpy as np
@@ -1204,6 +1266,87 @@ class compare(APIView):
                         path_module=i.ModelFile
                         print("ScenarioSolution data:", i.SolutionName)
             print("Performance_Metrics reslt:", get_performance_metrics2(path_module,path_testdata, 'Target'))
+
+
+            def get_factsheet_completeness_score(factsheet):
+                propdic = {}
+                import collections
+                info = collections.namedtuple('info', 'description value')
+                result = collections.namedtuple('result', 'score properties')
+                print("Factsheet:", factsheet)
+                factsheet=os.path.join(BASE_DIR,'media/' + str(factsheet))
+                with open(factsheet, 'r') as g:
+                    factsheet = json.loads(g.read())
+
+                score = 0
+                properties= {"dep" :info('Depends on','Factsheet')}
+                GENERAL_INPUTS = ["model_name", "purpose_description", "domain_description", "training_data_description", "model_information", "authors", "contact_information"]
+
+                n = len(GENERAL_INPUTS)
+                ctr = 0
+                for e in GENERAL_INPUTS:
+                    if "general" in factsheet and e in factsheet["general"]:
+                        ctr+=1
+                        properties[e] = info("Factsheet Property {}".format(e.replace("_"," ")), "present")
+                    else:
+                        properties[e] = info("Factsheet Property {}".format(e.replace("_"," ")), "missing")
+                        score = round(ctr/n*5)
+                
+                
+                return result(score=score, properties=properties)
+
+            # print("Factsheet_completeness Score result:", get_factsheet_completeness_score(path_module, path_traindata, path_testdata, path_factsheet, mappings_config))
+            
+            path_testdata=os.path.join(BASE_DIR,'apis/TestValues/test.csv')
+            path_module=os.path.join(BASE_DIR,'apis/TestValues/model.pkl')
+            path_traindata=os.path.join(BASE_DIR,'apis/TestValues/train.csv')
+            path_factsheet=os.path.join(BASE_DIR,'apis/TestValues/factsheet.json')
+            mappings_config=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/default.json')
+            
+            if scenarioobj1:
+                for i in scenarioobj1:
+                    if i.ScenarioName == request.data['SelectScenario'] and i.SolutionName == request.data['SelectSolution1']:
+                        path_testdata=i.TestFile
+                        path_module=i.ModelFile
+                        path_traindata=i.TrainingFile
+                        path_factsheet=i.FactsheetFile
+                        Target = i.Targetcolumn
+                        print("Factsheet file:", i.FactsheetFile)
+                        print("ScenarioSolution data:", i.SolutionName)
+
+            completeness_prop = get_factsheet_completeness_score(path_factsheet)
+            # print("completeness Score:######", completeness_prop[1]['model_name'][1])
+            # print("completeness Score:######", completeness_prop[1]['model_name'][1])
+
+            uploaddic['modelname1'] = completeness_prop[1]['model_name'][1]
+            uploaddic['purposedesc1'] = completeness_prop[1]['purpose_description'][1]
+            uploaddic['trainingdatadesc1'] = completeness_prop[1]['training_data_description'][1]
+            uploaddic['modelinfo1'] = completeness_prop[1]['model_information'][1]
+            uploaddic['authors1'] = completeness_prop[1]['authors'][1]
+            uploaddic['contactinfo1'] = completeness_prop[1]['contact_information'][1]
+
+            if scenarioobj1:
+                for i in scenarioobj1:
+                    if i.ScenarioName == request.data['SelectScenario'] and i.SolutionName == request.data['SelectSolution2']:
+                        path_testdata=i.TestFile
+                        path_module=i.ModelFile
+                        path_traindata=i.TrainingFile
+                        path_factsheet=i.FactsheetFile
+                        Target = i.Targetcolumn
+                        print("Factsheet file:", i.FactsheetFile)
+                        print("ScenarioSolution data:", i.SolutionName)
+
+            completeness_prop = get_factsheet_completeness_score(path_factsheet)
+            # print("completeness Score:######", completeness_prop[1]['model_name'][1])
+            # print("completeness Score:######", completeness_prop[1]['model_name'][1])
+
+            uploaddic['modelname2'] = completeness_prop[1]['model_name'][1]
+            uploaddic['purposedesc2'] = completeness_prop[1]['purpose_description'][1]
+            uploaddic['trainingdatadesc2'] = completeness_prop[1]['training_data_description'][1]
+            uploaddic['modelinfo2'] = completeness_prop[1]['model_information'][1]
+            uploaddic['authors2'] = completeness_prop[1]['authors'][1]
+            uploaddic['contactinfo2'] = completeness_prop[1]['contact_information'][1]
+
         return Response(uploaddic)
 
 
