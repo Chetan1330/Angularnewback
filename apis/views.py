@@ -385,12 +385,41 @@ print("Accountability reslt:", analyse_methodology(path_module,path_traindata,pa
 print("############################################################################")
 
 
+# def get_factsheet_completeness_score(model, training_dataset, test_dataset, factsheet, methodology_config):
+#     import collections
+#     info = collections.namedtuple('info', 'description value')
+#     result = collections.namedtuple('result', 'score properties')
+#     import pandas as pd
+
+#     score = 0
+#     properties= {"dep" :info('Depends on','Factsheet')}
+#     GENERAL_INPUTS = ["model_name", "purpose_description", "domain_description", "training_data_description", "model_information", "authors", "contact_information"]
+#     factsheet=pd.read_json(factsheet)
+#     n = len(GENERAL_INPUTS)
+#     ctr = 0
+#     for e in GENERAL_INPUTS:
+#         if "general" in factsheet.keys() and e in factsheet["general"].keys():
+#             ctr+=1
+#             properties[e] = info("Factsheet Property {}".format(e.replace("_"," ")), "present")
+#     else:
+#         properties[e] = info("Factsheet Property {}".format(e.replace("_"," ")), "missing")
+#         score = round(ctr/n*5)
+#     return result(score=score, properties=properties)
+
+# path_testdata=os.path.join(BASE_DIR,'apis/TestValues/test.csv')
+# path_traindata=os.path.join(BASE_DIR,'apis/TestValues/train.csv')
+# path_module=os.path.join(BASE_DIR,'apis/TestValues/model.pkl')
+# path_factsheet=os.path.join(BASE_DIR,'apis/TestValues/factsheet.json')
+# path_mapping_accountabiltiy=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/Accountability/default.json')
+# print("solution_description reslt:", get_factsheet_completeness_score(path_module, path_traindata, path_testdata, path_factsheet, path_mapping_accountabiltiy))
+# print("############################################################################")
 
 def get_final_score(model, train_data, test_data, config_weights, mappings_config, factsheet, recalc=False):
     mappingConfig1 = mappings_config
 
     with open(mappings_config, 'r') as f:
         mappings_config = json.loads(f.read())
+    # mappings_config=pd.read_json(mappings_config)
 
     config_fairness = mappings_config["fairness"]
     config_explainability = mappings_config["explainability"]
@@ -424,9 +453,12 @@ def get_final_score(model, train_data, test_data, config_weights, mappings_confi
 
     with open(mappingConfig1, 'r') as f:
         default_map = json.loads(f.read())
-    
+    # default_map=pd.read_json(mappingConfig1)
+
     with open(factsheet, 'r') as g:
         factsheet = json.loads(g.read())
+    # factsheet=pd.read_json(factsheet)
+
     #print("mapping is default:")
     #print(default_map == mappings_config)
     if default_map == mappings_config:
@@ -453,12 +485,116 @@ def get_final_score(model, train_data, test_data, config_weights, mappings_confi
     print("Scores is:", scores)
     with open(config_weights, 'r') as n:
         config_weights = json.loads(n.read())
-
+    # config_weights=pd.read_json(config_weights)
     # configdict = {}
-    # print("Config weight:",config_weights)
+    print("Config weight:",config_weights)
 
-    # for pillar in scores.items():
-    #     # print("Pillars:", dict(pillar)
+    fairness_score = 0
+    explainability_score = 0
+    robustness_score = 0
+    methodology_score = 0
+    for pillar in scores.items():
+        # print("Pillars:", pillar)
+        # pillar = {'pillar':pillar}
+
+        if pillar[0] == 'fairness':
+            # print("Pillar fairness is:", pillar[1])
+            fairness_score = int(pillar[1]['underfitting'])*0.35 +  int(pillar[1]['overfitting'])*0.15 
+            + int(pillar[1]['statistical_parity_difference'])*0.15 + int(pillar[1]['equal_opportunity_difference'])*0.2
+            + int(pillar[1]['average_odds_difference'])*0.1 + int(pillar[1]['disparate_impact'])*0.1 
+            + int(pillar[1]['class_balance'])*0.1
+
+            print("Fairness Score is:", fairness_score)
+        
+        if pillar[0] == 'explainability':
+            # print("Pillar explainability is:", pillar[1]['algorithm_class'])
+            algorithm_class = 0
+            correlated_features = 0
+            model_size = 0
+            feature_relevance = 0
+
+            if str(pillar[1]['algorithm_class']) != 'nan':
+                algorithm_class= int(pillar[1]['algorithm_class'])*0.55
+
+            if str(pillar[1]['correlated_features']) != 'nan':
+                correlated_features= int(pillar[1]['correlated_features'])*0.15
+
+            if str(pillar[1]['model_size']) != 'nan':
+                model_size= int(pillar[1]['model_size'])*5
+
+            if str(pillar[1]['feature_relevance']) != 'nan':
+                feature_relevance= int(pillar[1]['feature_relevance'])*0.15
+
+            explainability_score =  algorithm_class +  correlated_features + model_size + feature_relevance
+            
+            print("explainability Score is:", explainability_score)
+
+        if pillar[0] == 'robustness':
+            # print("Pillar robustness is:", pillar[1])
+
+            confidence_score = 0
+            clique_method = 0
+            loss_sensitivity = 0
+            clever_score = 0
+            er_fast_gradient_attack = 0
+            er_carlini_wagner_attack = 0
+            er_deepfool_attack = 0
+
+            if str(pillar[1]['confidence_score']) != 'nan':
+                confidence_score= int(pillar[1]['confidence_score'])*0.2
+
+            if str(pillar[1]['clique_method']) != 'nan':
+                clique_method= int(pillar[1]['clique_method'])*0.2
+
+            if str(pillar[1]['loss_sensitivity']) != 'nan':
+                loss_sensitivity= int(pillar[1]['loss_sensitivity'])*0.2
+
+            if str(pillar[1]['clever_score']) != 'nan':
+                clever_score= int(pillar[1]['clever_score'])*0.2
+
+            if str(pillar[1]['er_fast_gradient_attack']) != 'nan':
+                er_fast_gradient_attack= int(pillar[1]['er_fast_gradient_attack'])*0.2
+            
+            if str(pillar[1]['er_carlini_wagner_attack']) != 'nan':
+                er_carlini_wagner_attack= int(pillar[1]['er_carlini_wagner_attack'])*0.2
+            
+            if str(pillar[1]['er_deepfool_attack']) != 'nan':
+                er_deepfool_attack= int(pillar[1]['er_deepfool_attack'])*0.2
+
+            robustness_score =  confidence_score +  clique_method + loss_sensitivity + clever_score + er_fast_gradient_attack + er_carlini_wagner_attack + er_deepfool_attack
+            
+            print("robustness Score is:", robustness_score)
+
+        
+        if pillar[0] == 'methodology':
+            # print("Pillar methodology is:", pillar[1])
+            normalization = 0
+            missing_data = 0
+            regularization = 0
+            train_test_split = 0
+            factsheet_completeness = 0
+
+            if str(pillar[1]['normalization']) != 'nan':
+                normalization= int(pillar[1]['normalization'])*0.2
+
+            if str(pillar[1]['missing_data']) != 'nan':
+                missing_data= int(pillar[1]['missing_data'])*0.2
+
+            if str(pillar[1]['regularization']) != 'nan':
+                regularization= int(pillar[1]['regularization'])*0.2
+
+            if str(pillar[1]['train_test_split']) != 'nan':
+                train_test_split= int(pillar[1]['train_test_split'])*0.2
+            
+            if str(pillar[1]['factsheet_completeness']) != 'nan':
+                factsheet_completeness= int(pillar[1]['factsheet_completeness'])*0.2
+
+            methodology_score =  normalization +  missing_data + regularization + train_test_split + factsheet_completeness
+            
+            print("methodology Score is:", methodology_score)
+
+    trust_score = fairness_score*0.25 + explainability_score*0.25 + robustness_score*0.25 + methodology_score*0.25
+    print("Trust Score is:", trust_score)
     #     config = config_weights[pillar]
     #     weighted_scores = list(map(lambda x: scores[pillar][x] * config[x], scores[pillar].keys()))
     #     sum_weights = np.nansum(np.array(list(config.values()))[~np.isnan(weighted_scores)])
@@ -468,7 +604,7 @@ def get_final_score(model, train_data, test_data, config_weights, mappings_confi
     #     result = round(np.nansum(weighted_scores)/sum_weights,1)
     #     final_scores[pillar] = result
 
-    return scores, properties
+    # return scores, properties
 
 
 path_testdata=os.path.join(BASE_DIR,'apis/TestValues/test.csv')
@@ -1043,50 +1179,229 @@ class analyze(APIView):
             uploaddic['authors'] = completeness_prop[1]['authors'][1]
             uploaddic['contactinfo'] = completeness_prop[1]['contact_information'][1]
 
-            # def get_properties_section(train_data, test_data, factsheet):
-            #     import pandas as pd
+            
 
-            #     train_data=pd.read_csv(train_data)
-            #     test_data=pd.read_csv(test_data)
 
-            #     with open(factsheet, 'r') as g:
-            #         factsheet = json.loads(g.read())
+            def get_final_score(model, train_data, test_data, config_weights, mappings_config, factsheet, recalc=False):
+                mappingConfig1 = mappings_config
 
+                with open(mappings_config, 'r') as f:
+                    mappings_config = json.loads(f.read())
+                # mappings_config=pd.read_json(mappings_config)
+
+                config_fairness = mappings_config["fairness"]
+                config_explainability = mappings_config["explainability"]
+                config_robustness = mappings_config["robustness"]
+                config_methodology = mappings_config["methodology"]
+
+
+                methodology_config=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/Accountability/default.json')
+                config_explainability=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/explainability/default.json')
+                config_fairness=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/fairness/default.json')
+                config_robustness=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/robustness/default.json')
+
+                def trusting_AI_scores(model, train_data, test_data, factsheet, config_fairness, config_explainability, config_robustness, methodology_config):
+                # if "scores" in factsheet.keys() and "properties" in factsheet.keys():
+                #     scores = factsheet["scores"]
+                #     properties = factsheet["properties"]
+                # else:
+                    output = dict(
+                        fairness       = analyse_fairness(model, train_data, test_data, factsheet, config_fairness),
+                        explainability = analyse_explainability(model, train_data, test_data, config_explainability, factsheet),
+                        robustness     = analyse_robustness(model, train_data, test_data, config_robustness, factsheet),
+                        methodology    = analyse_methodology(model, train_data, test_data, factsheet, methodology_config)
+                    )
+                    scores = dict((k, v.score) for k, v in output.items())
+                    properties = dict((k, v.properties) for k, v in output.items())
+                    # factsheet["scores"] = scores
+                    # factsheet["properties"] = properties
+                    # write_into_factsheet(factsheet, solution_set_path)
                 
-            #     if "properties" in factsheet:
-            #         factsheet = factsheet["properties"]
+                    return  result(score=scores, properties=properties)
 
-            #         properties = pd.DataFrame({
-            #             "Model Type": [factsheet["explainability"]["algorithm_class"]["clf_name"][1]],
-            #             "Train Test Split": [factsheet["methodology"]["train_test_split"]["train_test_split"][1]],
-            #             "Train / Test Data Size": str(train_data.shape[0])+ " samples / "+ str(test_data.shape[0])+ " samples",
-            #             "Regularization Technique": [factsheet["methodology"]["regularization"]["regularization_technique"][1]],
-            #             "Normalization Technique": [factsheet["methodology"]["normalization"]["normalization"][1]],
-            #             "Number of Features": [factsheet["explainability"]["model_size"]["n_features"][1]],
-            #         })
-            #         properties = properties.transpose()
-            #         properties = properties.reset_index()
-            #         properties['index'] = properties['index'].str.title()
-            #         properties.rename(columns={"index": "key", 0: "value"}, inplace=True)
-            #         return properties
+                with open(mappingConfig1, 'r') as f:
+                    default_map = json.loads(f.read())
+                # default_map=pd.read_json(mappingConfig1)
+
+                factsheet=os.path.join(BASE_DIR,'media/' + str(factsheet))
+                with open(factsheet, 'r') as g:
+                    factsheet = json.loads(g.read())
+                # factsheet=pd.read_json(factsheet)
+
+                #print("mapping is default:")
+                #print(default_map == mappings_config)
+                if default_map == mappings_config:
+                    if "scores" in factsheet.keys() and "properties" in factsheet.keys() and not recalc:
+                        scores = factsheet["scores"]
+                        properties = factsheet["properties"]
+                else:
+                    result = trusting_AI_scores(model, train_data, test_data, factsheet, config_fairness, config_explainability, config_robustness, config_methodology)
+                    scores = result.score
+                    factsheet["scores"] = scores
+                    properties = result.properties
+                    factsheet["properties"] = properties
+                # try:
+                #     write_into_factsheet(factsheet, solution_set_path)
+                # except Exception as e:
+                #     print("ERROR in write_into_factsheet: {}".format(e))
+                # else:
+                #     result = trusting_AI_scores(model, train_data, test_data, factsheet, config_fairness, config_explainability, config_robustness, config_methodology, solution_set_path)
+                #     scores = result.score
+                #     properties = result.properties
+
+                final_scores = dict()
+                # scores = tuple(scores)
+                print("Scores is:", scores)
+                with open(config_weights, 'r') as n:
+                    config_weights = json.loads(n.read())
+                # config_weights=pd.read_json(config_weights)
+                # configdict = {}
+                print("Config weight:",config_weights)
+
+                fairness_score = 0
+                explainability_score = 0
+                robustness_score = 0
+                methodology_score = 0
+                for pillar in scores.items():
+                    # print("Pillars:", pillar)
+                    # pillar = {'pillar':pillar}
+
+                    if pillar[0] == 'fairness':
+                        # print("Pillar fairness is:", pillar[1])
+                        fairness_score = int(pillar[1]['underfitting'])*0.35 +  int(pillar[1]['overfitting'])*0.15 
+                        + int(pillar[1]['statistical_parity_difference'])*0.15 + int(pillar[1]['equal_opportunity_difference'])*0.2
+                        + int(pillar[1]['average_odds_difference'])*0.1 + int(pillar[1]['disparate_impact'])*0.1 
+                        + int(pillar[1]['class_balance'])*0.1
+
+                        uploaddic['fairness_score'] = fairness_score
+                        print("Fairness Score is:", fairness_score)
+                    
+                    if pillar[0] == 'explainability':
+                        # print("Pillar explainability is:", pillar[1]['algorithm_class'])
+                        algorithm_class = 0
+                        correlated_features = 0
+                        model_size = 0
+                        feature_relevance = 0
+
+                        if str(pillar[1]['algorithm_class']) != 'nan':
+                            algorithm_class= int(pillar[1]['algorithm_class'])*0.55
+
+                        if str(pillar[1]['correlated_features']) != 'nan':
+                            correlated_features= int(pillar[1]['correlated_features'])*0.15
+
+                        if str(pillar[1]['model_size']) != 'nan':
+                            model_size= int(pillar[1]['model_size'])*5
+
+                        if str(pillar[1]['feature_relevance']) != 'nan':
+                            feature_relevance= int(pillar[1]['feature_relevance'])*0.15
+
+                        explainability_score =  algorithm_class +  correlated_features + model_size + feature_relevance
+                        
+                        uploaddic['explainability_score'] = explainability_score
+                        print("explainability Score is:", explainability_score)
+
+                    if pillar[0] == 'robustness':
+                        # print("Pillar robustness is:", pillar[1])
+
+                        confidence_score = 0
+                        clique_method = 0
+                        loss_sensitivity = 0
+                        clever_score = 0
+                        er_fast_gradient_attack = 0
+                        er_carlini_wagner_attack = 0
+                        er_deepfool_attack = 0
+
+                        if str(pillar[1]['confidence_score']) != 'nan':
+                            confidence_score= int(pillar[1]['confidence_score'])*0.2
+
+                        if str(pillar[1]['clique_method']) != 'nan':
+                            clique_method= int(pillar[1]['clique_method'])*0.2
+
+                        if str(pillar[1]['loss_sensitivity']) != 'nan':
+                            loss_sensitivity= int(pillar[1]['loss_sensitivity'])*0.2
+
+                        if str(pillar[1]['clever_score']) != 'nan':
+                            clever_score= int(pillar[1]['clever_score'])*0.2
+
+                        if str(pillar[1]['er_fast_gradient_attack']) != 'nan':
+                            er_fast_gradient_attack= int(pillar[1]['er_fast_gradient_attack'])*0.2
+                        
+                        if str(pillar[1]['er_carlini_wagner_attack']) != 'nan':
+                            er_carlini_wagner_attack= int(pillar[1]['er_carlini_wagner_attack'])*0.2
+                        
+                        if str(pillar[1]['er_deepfool_attack']) != 'nan':
+                            er_deepfool_attack= int(pillar[1]['er_deepfool_attack'])*0.2
+
+                        robustness_score =  confidence_score +  clique_method + loss_sensitivity + clever_score + er_fast_gradient_attack + er_carlini_wagner_attack + er_deepfool_attack
+                        
+                        uploaddic['robustness_score'] = robustness_score
+                        print("robustness Score is:", robustness_score)
+
+                    
+                    if pillar[0] == 'methodology':
+                        # print("Pillar methodology is:", pillar[1])
+                        normalization = 0
+                        missing_data = 0
+                        regularization = 0
+                        train_test_split = 0
+                        factsheet_completeness = 0
+
+                        if str(pillar[1]['normalization']) != 'nan':
+                            normalization= int(pillar[1]['normalization'])*0.2
+
+                        if str(pillar[1]['missing_data']) != 'nan':
+                            missing_data= int(pillar[1]['missing_data'])*0.2
+
+                        if str(pillar[1]['regularization']) != 'nan':
+                            regularization= int(pillar[1]['regularization'])*0.2
+
+                        if str(pillar[1]['train_test_split']) != 'nan':
+                            train_test_split= int(pillar[1]['train_test_split'])*0.2
+                        
+                        if str(pillar[1]['factsheet_completeness']) != 'nan':
+                            factsheet_completeness= int(pillar[1]['factsheet_completeness'])*0.2
+
+                        methodology_score =  normalization +  missing_data + regularization + train_test_split + factsheet_completeness
+                        
+                        uploaddic['methodology_score'] = methodology_score
+                        print("methodology Score is:", methodology_score)
+
+                trust_score = fairness_score*0.25 + explainability_score*0.25 + robustness_score*0.25 + methodology_score*0.25
+                uploaddic['trust_score'] = trust_score
+                print("Trust Score is:", trust_score)
+                #     config = config_weights[pillar]
+                #     weighted_scores = list(map(lambda x: scores[pillar][x] * config[x], scores[pillar].keys()))
+                #     sum_weights = np.nansum(np.array(list(config.values()))[~np.isnan(weighted_scores)])
+                # if sum_weights == 0:
+                #     result = 0
+                # else:
+                #     result = round(np.nansum(weighted_scores)/sum_weights,1)
+                #     final_scores[pillar] = result
+
+                # return scores, properties
 
 
-            # path_testdata=os.path.join(BASE_DIR,'apis/TestValues/test.csv')
-            # path_traindata=os.path.join(BASE_DIR,'apis/TestValues/train.csv')
-            # path_module=os.path.join(BASE_DIR,'apis/TestValues/model.pkl')
-            # path_factsheet=os.path.join(BASE_DIR,'apis/TestValues/factsheet.json')
-            # # path_mapping_accountabiltiy=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/Accountability/default.json')
-            # # path_mapping_fairness=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/explainability/default.json')
+            path_testdata=os.path.join(BASE_DIR,'apis/TestValues/test.csv')
+            path_traindata=os.path.join(BASE_DIR,'apis/TestValues/train.csv')
+            path_module=os.path.join(BASE_DIR,'apis/TestValues/model.pkl')
+            path_factsheet=os.path.join(BASE_DIR,'apis/TestValues/factsheet.json')
+            config_weights=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Weights/default.json')
+            mappings_config=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/default.json')
+            factsheet=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/default.json')
 
-            # if scenarioobj:
-            #     for i in scenarioobj:
-            #         path_testdata=i.TestFile
-            #         path_traindata=i.TrainingFile
-            #         path_factsheet=i.FactsheetFile
-            #         print("ScenarioSolution data:", i.SolutionName)
+            if scenarioobj:
+                for i in scenarioobj:
+                    if i.ScenarioName == request.data['SelectScenario'] and i.SolutionName == request.data['SelectSolution']:
+                        path_testdata=i.TestFile
+                        path_module=i.ModelFile
+                        path_traindata=i.TrainingFile
+                        path_factsheet=i.FactsheetFile
+                        
+            # solution_set_path,
+            # path_mapping_accountabiltiy=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/Accountability/default.json')
+            # path_mapping_fairness=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/explainability/default.json')
+            print("Final Score result:", get_final_score(path_module, path_traindata, path_testdata, config_weights, mappings_config, path_factsheet))
 
-            # print("properties_section reslt:", get_properties_section(path_traindata,path_testdata, path_factsheet))
-        
         # return result(score=score, properties=properties)
         return Response(uploaddic)
 
@@ -1346,6 +1661,430 @@ class compare(APIView):
             uploaddic['modelinfo2'] = completeness_prop[1]['model_information'][1]
             uploaddic['authors2'] = completeness_prop[1]['authors'][1]
             uploaddic['contactinfo2'] = completeness_prop[1]['contact_information'][1]
+
+
+
+
+            def get_final_score1(model, train_data, test_data, config_weights, mappings_config, factsheet, recalc=False):
+                mappingConfig1 = mappings_config
+
+                with open(mappings_config, 'r') as f:
+                    mappings_config = json.loads(f.read())
+                # mappings_config=pd.read_json(mappings_config)
+
+                config_fairness = mappings_config["fairness"]
+                config_explainability = mappings_config["explainability"]
+                config_robustness = mappings_config["robustness"]
+                config_methodology = mappings_config["methodology"]
+
+
+                methodology_config=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/Accountability/default.json')
+                config_explainability=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/explainability/default.json')
+                config_fairness=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/fairness/default.json')
+                config_robustness=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/robustness/default.json')
+
+                def trusting_AI_scores(model, train_data, test_data, factsheet, config_fairness, config_explainability, config_robustness, methodology_config):
+                # if "scores" in factsheet.keys() and "properties" in factsheet.keys():
+                #     scores = factsheet["scores"]
+                #     properties = factsheet["properties"]
+                # else:
+                    output = dict(
+                        fairness       = analyse_fairness(model, train_data, test_data, factsheet, config_fairness),
+                        explainability = analyse_explainability(model, train_data, test_data, config_explainability, factsheet),
+                        robustness     = analyse_robustness(model, train_data, test_data, config_robustness, factsheet),
+                        methodology    = analyse_methodology(model, train_data, test_data, factsheet, methodology_config)
+                    )
+                    scores = dict((k, v.score) for k, v in output.items())
+                    properties = dict((k, v.properties) for k, v in output.items())
+                    # factsheet["scores"] = scores
+                    # factsheet["properties"] = properties
+                    # write_into_factsheet(factsheet, solution_set_path)
+                
+                    return  result(score=scores, properties=properties)
+
+                with open(mappingConfig1, 'r') as f:
+                    default_map = json.loads(f.read())
+                # default_map=pd.read_json(mappingConfig1)
+
+                # factsheet=os.path.join(BASE_DIR,'media/' + str(factsheet))
+                with open(factsheet, 'r') as g:
+                    factsheet = json.loads(g.read())
+                # factsheet=pd.read_json(factsheet)
+
+                #print("mapping is default:")
+                #print(default_map == mappings_config)
+                if default_map == mappings_config:
+                    if "scores" in factsheet.keys() and "properties" in factsheet.keys() and not recalc:
+                        scores = factsheet["scores"]
+                        properties = factsheet["properties"]
+                else:
+                    result = trusting_AI_scores(model, train_data, test_data, factsheet, config_fairness, config_explainability, config_robustness, config_methodology)
+                    scores = result.score
+                    factsheet["scores"] = scores
+                    properties = result.properties
+                    factsheet["properties"] = properties
+                # try:
+                #     write_into_factsheet(factsheet, solution_set_path)
+                # except Exception as e:
+                #     print("ERROR in write_into_factsheet: {}".format(e))
+                # else:
+                #     result = trusting_AI_scores(model, train_data, test_data, factsheet, config_fairness, config_explainability, config_robustness, config_methodology, solution_set_path)
+                #     scores = result.score
+                #     properties = result.properties
+
+                final_scores = dict()
+                # scores = tuple(scores)
+                print("Scores is:", scores)
+                with open(config_weights, 'r') as n:
+                    config_weights = json.loads(n.read())
+                # config_weights=pd.read_json(config_weights)
+                # configdict = {}
+                print("Config weight:",config_weights)
+
+                fairness_score = 0
+                explainability_score = 0
+                robustness_score = 0
+                methodology_score = 0
+                for pillar in scores.items():
+                    # print("Pillars:", pillar)
+                    # pillar = {'pillar':pillar}
+
+                    if pillar[0] == 'fairness':
+                        # print("Pillar fairness is:", pillar[1])
+                        fairness_score = int(pillar[1]['underfitting'])*0.35 +  int(pillar[1]['overfitting'])*0.15 
+                        + int(pillar[1]['statistical_parity_difference'])*0.15 + int(pillar[1]['equal_opportunity_difference'])*0.2
+                        + int(pillar[1]['average_odds_difference'])*0.1 + int(pillar[1]['disparate_impact'])*0.1 
+                        + int(pillar[1]['class_balance'])*0.1
+
+                        uploaddic['fairness_score1'] = fairness_score
+                        print("Fairness Score is:", fairness_score)
+                    
+                    if pillar[0] == 'explainability':
+                        # print("Pillar explainability is:", pillar[1]['algorithm_class'])
+                        algorithm_class = 0
+                        correlated_features = 0
+                        model_size = 0
+                        feature_relevance = 0
+
+                        if str(pillar[1]['algorithm_class']) != 'nan':
+                            algorithm_class= int(pillar[1]['algorithm_class'])*0.55
+
+                        if str(pillar[1]['correlated_features']) != 'nan':
+                            correlated_features= int(pillar[1]['correlated_features'])*0.15
+
+                        if str(pillar[1]['model_size']) != 'nan':
+                            model_size= int(pillar[1]['model_size'])*5
+
+                        if str(pillar[1]['feature_relevance']) != 'nan':
+                            feature_relevance= int(pillar[1]['feature_relevance'])*0.15
+
+                        explainability_score =  algorithm_class +  correlated_features + model_size + feature_relevance
+                        
+                        uploaddic['explainability_score1'] = explainability_score
+                        print("explainability Score is:", explainability_score)
+
+                    if pillar[0] == 'robustness':
+                        # print("Pillar robustness is:", pillar[1])
+
+                        confidence_score = 0
+                        clique_method = 0
+                        loss_sensitivity = 0
+                        clever_score = 0
+                        er_fast_gradient_attack = 0
+                        er_carlini_wagner_attack = 0
+                        er_deepfool_attack = 0
+
+                        if str(pillar[1]['confidence_score']) != 'nan':
+                            confidence_score= int(pillar[1]['confidence_score'])*0.2
+
+                        if str(pillar[1]['clique_method']) != 'nan':
+                            clique_method= int(pillar[1]['clique_method'])*0.2
+
+                        if str(pillar[1]['loss_sensitivity']) != 'nan':
+                            loss_sensitivity= int(pillar[1]['loss_sensitivity'])*0.2
+
+                        if str(pillar[1]['clever_score']) != 'nan':
+                            clever_score= int(pillar[1]['clever_score'])*0.2
+
+                        if str(pillar[1]['er_fast_gradient_attack']) != 'nan':
+                            er_fast_gradient_attack= int(pillar[1]['er_fast_gradient_attack'])*0.2
+                        
+                        if str(pillar[1]['er_carlini_wagner_attack']) != 'nan':
+                            er_carlini_wagner_attack= int(pillar[1]['er_carlini_wagner_attack'])*0.2
+                        
+                        if str(pillar[1]['er_deepfool_attack']) != 'nan':
+                            er_deepfool_attack= int(pillar[1]['er_deepfool_attack'])*0.2
+
+                        robustness_score =  confidence_score +  clique_method + loss_sensitivity + clever_score + er_fast_gradient_attack + er_carlini_wagner_attack + er_deepfool_attack
+                        
+                        uploaddic['robustness_score1'] = robustness_score
+                        print("robustness Score is:", robustness_score)
+
+                    
+                    if pillar[0] == 'methodology':
+                        # print("Pillar methodology is:", pillar[1])
+                        normalization = 0
+                        missing_data = 0
+                        regularization = 0
+                        train_test_split = 0
+                        factsheet_completeness = 0
+
+                        if str(pillar[1]['normalization']) != 'nan':
+                            normalization= int(pillar[1]['normalization'])*0.2
+
+                        if str(pillar[1]['missing_data']) != 'nan':
+                            missing_data= int(pillar[1]['missing_data'])*0.2
+
+                        if str(pillar[1]['regularization']) != 'nan':
+                            regularization= int(pillar[1]['regularization'])*0.2
+
+                        if str(pillar[1]['train_test_split']) != 'nan':
+                            train_test_split= int(pillar[1]['train_test_split'])*0.2
+                        
+                        if str(pillar[1]['factsheet_completeness']) != 'nan':
+                            factsheet_completeness= int(pillar[1]['factsheet_completeness'])*0.2
+
+                        methodology_score =  normalization +  missing_data + regularization + train_test_split + factsheet_completeness
+                        
+                        uploaddic['methodology_score1'] = methodology_score
+                        print("methodology Score is:", methodology_score)
+
+                trust_score = fairness_score*0.25 + explainability_score*0.25 + robustness_score*0.25 + methodology_score*0.25
+                uploaddic['trust_score1'] = trust_score
+                print("Trust Score is:", trust_score)
+                
+
+            path_testdata=os.path.join(BASE_DIR,'apis/TestValues/test.csv')
+            path_traindata=os.path.join(BASE_DIR,'apis/TestValues/train.csv')
+            path_module=os.path.join(BASE_DIR,'apis/TestValues/model.pkl')
+            path_factsheet=os.path.join(BASE_DIR,'apis/TestValues/factsheet.json')
+            config_weights=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Weights/default.json')
+            mappings_config=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/default.json')
+            factsheet=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/default.json')
+
+            if scenarioobj:
+                for i in scenarioobj:
+                    if i.ScenarioName == request.data['SelectScenario'] and i.SolutionName == request.data['SelectSolution1']:
+                        path_testdata=i.TestFile
+                        path_module=i.ModelFile
+                        path_traindata=i.TrainingFile
+                        path_factsheet=i.FactsheetFile
+                        
+            # solution_set_path,
+            # path_mapping_accountabiltiy=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/Accountability/default.json')
+            # path_mapping_fairness=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/explainability/default.json')
+            print("Final Score result:", get_final_score1(path_module, path_traindata, path_testdata, config_weights, mappings_config, path_factsheet))
+
+
+
+            def get_final_score2(model, train_data, test_data, config_weights, mappings_config, factsheet, recalc=False):
+                mappingConfig1 = mappings_config
+
+                with open(mappings_config, 'r') as f:
+                    mappings_config = json.loads(f.read())
+                # mappings_config=pd.read_json(mappings_config)
+
+                config_fairness = mappings_config["fairness"]
+                config_explainability = mappings_config["explainability"]
+                config_robustness = mappings_config["robustness"]
+                config_methodology = mappings_config["methodology"]
+
+
+                methodology_config=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/Accountability/default.json')
+                config_explainability=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/explainability/default.json')
+                config_fairness=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/fairness/default.json')
+                config_robustness=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/robustness/default.json')
+
+                def trusting_AI_scores(model, train_data, test_data, factsheet, config_fairness, config_explainability, config_robustness, methodology_config):
+                # if "scores" in factsheet.keys() and "properties" in factsheet.keys():
+                #     scores = factsheet["scores"]
+                #     properties = factsheet["properties"]
+                # else:
+                    output = dict(
+                        fairness       = analyse_fairness(model, train_data, test_data, factsheet, config_fairness),
+                        explainability = analyse_explainability(model, train_data, test_data, config_explainability, factsheet),
+                        robustness     = analyse_robustness(model, train_data, test_data, config_robustness, factsheet),
+                        methodology    = analyse_methodology(model, train_data, test_data, factsheet, methodology_config)
+                    )
+                    scores = dict((k, v.score) for k, v in output.items())
+                    properties = dict((k, v.properties) for k, v in output.items())
+                    # factsheet["scores"] = scores
+                    # factsheet["properties"] = properties
+                    # write_into_factsheet(factsheet, solution_set_path)
+                
+                    return  result(score=scores, properties=properties)
+
+                with open(mappingConfig1, 'r') as f:
+                    default_map = json.loads(f.read())
+                # default_map=pd.read_json(mappingConfig1)
+
+                # factsheet=os.path.join(BASE_DIR,'media/' + str(factsheet))
+                with open(factsheet, 'r') as g:
+                    factsheet = json.loads(g.read())
+                # factsheet=pd.read_json(factsheet)
+
+                #print("mapping is default:")
+                #print(default_map == mappings_config)
+                if default_map == mappings_config:
+                    if "scores" in factsheet.keys() and "properties" in factsheet.keys() and not recalc:
+                        scores = factsheet["scores"]
+                        properties = factsheet["properties"]
+                else:
+                    result = trusting_AI_scores(model, train_data, test_data, factsheet, config_fairness, config_explainability, config_robustness, config_methodology)
+                    scores = result.score
+                    factsheet["scores"] = scores
+                    properties = result.properties
+                    factsheet["properties"] = properties
+                # try:
+                #     write_into_factsheet(factsheet, solution_set_path)
+                # except Exception as e:
+                #     print("ERROR in write_into_factsheet: {}".format(e))
+                # else:
+                #     result = trusting_AI_scores(model, train_data, test_data, factsheet, config_fairness, config_explainability, config_robustness, config_methodology, solution_set_path)
+                #     scores = result.score
+                #     properties = result.properties
+
+                final_scores = dict()
+                # scores = tuple(scores)
+                print("Scores is:", scores)
+                with open(config_weights, 'r') as n:
+                    config_weights = json.loads(n.read())
+                # config_weights=pd.read_json(config_weights)
+                # configdict = {}
+                print("Config weight:",config_weights)
+
+                fairness_score = 0
+                explainability_score = 0
+                robustness_score = 0
+                methodology_score = 0
+                for pillar in scores.items():
+                    # print("Pillars:", pillar)
+                    # pillar = {'pillar':pillar}
+
+                    if pillar[0] == 'fairness':
+                        # print("Pillar fairness is:", pillar[1])
+                        fairness_score = int(pillar[1]['underfitting'])*0.35 +  int(pillar[1]['overfitting'])*0.15 
+                        + int(pillar[1]['statistical_parity_difference'])*0.15 + int(pillar[1]['equal_opportunity_difference'])*0.2
+                        + int(pillar[1]['average_odds_difference'])*0.1 + int(pillar[1]['disparate_impact'])*0.1 
+                        + int(pillar[1]['class_balance'])*0.1
+
+                        uploaddic['fairness_score2'] = fairness_score
+                        print("Fairness Score is:", fairness_score)
+                    
+                    if pillar[0] == 'explainability':
+                        # print("Pillar explainability is:", pillar[1]['algorithm_class'])
+                        algorithm_class = 0
+                        correlated_features = 0
+                        model_size = 0
+                        feature_relevance = 0
+
+                        if str(pillar[1]['algorithm_class']) != 'nan':
+                            algorithm_class= int(pillar[1]['algorithm_class'])*0.55
+
+                        if str(pillar[1]['correlated_features']) != 'nan':
+                            correlated_features= int(pillar[1]['correlated_features'])*0.15
+
+                        if str(pillar[1]['model_size']) != 'nan':
+                            model_size= int(pillar[1]['model_size'])*5
+
+                        if str(pillar[1]['feature_relevance']) != 'nan':
+                            feature_relevance= int(pillar[1]['feature_relevance'])*0.15
+
+                        explainability_score =  algorithm_class +  correlated_features + model_size + feature_relevance
+                        
+                        uploaddic['explainability_score2'] = explainability_score
+                        print("explainability Score is:", explainability_score)
+
+                    if pillar[0] == 'robustness':
+                        # print("Pillar robustness is:", pillar[1])
+
+                        confidence_score = 0
+                        clique_method = 0
+                        loss_sensitivity = 0
+                        clever_score = 0
+                        er_fast_gradient_attack = 0
+                        er_carlini_wagner_attack = 0
+                        er_deepfool_attack = 0
+
+                        if str(pillar[1]['confidence_score']) != 'nan':
+                            confidence_score= int(pillar[1]['confidence_score'])*0.2
+
+                        if str(pillar[1]['clique_method']) != 'nan':
+                            clique_method= int(pillar[1]['clique_method'])*0.2
+
+                        if str(pillar[1]['loss_sensitivity']) != 'nan':
+                            loss_sensitivity= int(pillar[1]['loss_sensitivity'])*0.2
+
+                        if str(pillar[1]['clever_score']) != 'nan':
+                            clever_score= int(pillar[1]['clever_score'])*0.2
+
+                        if str(pillar[1]['er_fast_gradient_attack']) != 'nan':
+                            er_fast_gradient_attack= int(pillar[1]['er_fast_gradient_attack'])*0.2
+                        
+                        if str(pillar[1]['er_carlini_wagner_attack']) != 'nan':
+                            er_carlini_wagner_attack= int(pillar[1]['er_carlini_wagner_attack'])*0.2
+                        
+                        if str(pillar[1]['er_deepfool_attack']) != 'nan':
+                            er_deepfool_attack= int(pillar[1]['er_deepfool_attack'])*0.2
+
+                        robustness_score =  confidence_score +  clique_method + loss_sensitivity + clever_score + er_fast_gradient_attack + er_carlini_wagner_attack + er_deepfool_attack
+                        
+                        uploaddic['robustness_score2'] = robustness_score
+                        print("robustness Score is:", robustness_score)
+
+                    
+                    if pillar[0] == 'methodology':
+                        # print("Pillar methodology is:", pillar[1])
+                        normalization = 0
+                        missing_data = 0
+                        regularization = 0
+                        train_test_split = 0
+                        factsheet_completeness = 0
+
+                        if str(pillar[1]['normalization']) != 'nan':
+                            normalization= int(pillar[1]['normalization'])*0.2
+
+                        if str(pillar[1]['missing_data']) != 'nan':
+                            missing_data= int(pillar[1]['missing_data'])*0.2
+
+                        if str(pillar[1]['regularization']) != 'nan':
+                            regularization= int(pillar[1]['regularization'])*0.2
+
+                        if str(pillar[1]['train_test_split']) != 'nan':
+                            train_test_split= int(pillar[1]['train_test_split'])*0.2
+                        
+                        if str(pillar[1]['factsheet_completeness']) != 'nan':
+                            factsheet_completeness= int(pillar[1]['factsheet_completeness'])*0.2
+
+                        methodology_score =  normalization +  missing_data + regularization + train_test_split + factsheet_completeness
+                        
+                        uploaddic['methodology_score2'] = methodology_score
+                        print("methodology Score is:", methodology_score)
+
+                trust_score = fairness_score*0.25 + explainability_score*0.25 + robustness_score*0.25 + methodology_score*0.25
+                uploaddic['trust_score2'] = trust_score
+                print("Trust Score is:", trust_score)
+
+            path_testdata=os.path.join(BASE_DIR,'apis/TestValues/test.csv')
+            path_traindata=os.path.join(BASE_DIR,'apis/TestValues/train.csv')
+            path_module=os.path.join(BASE_DIR,'apis/TestValues/model.pkl')
+            path_factsheet=os.path.join(BASE_DIR,'apis/TestValues/factsheet.json')
+            config_weights=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Weights/default.json')
+            mappings_config=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/default.json')
+            factsheet=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/default.json')
+
+            if scenarioobj:
+                for i in scenarioobj:
+                    if i.ScenarioName == request.data['SelectScenario'] and i.SolutionName == request.data['SelectSolution2']:
+                        path_testdata=i.TestFile
+                        path_module=i.ModelFile
+                        path_traindata=i.TrainingFile
+                        path_factsheet=i.FactsheetFile
+                        
+            # solution_set_path,
+            # path_mapping_accountabiltiy=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/Accountability/default.json')
+            # path_mapping_fairness=os.path.join(BASE_DIR,'apis/MappingsWeightsMetrics/Mappings/explainability/default.json')
+            print("Final Score result:", get_final_score2(path_module, path_traindata, path_testdata, config_weights, mappings_config, path_factsheet))
 
         return Response(uploaddic)
 
