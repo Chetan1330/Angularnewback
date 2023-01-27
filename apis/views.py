@@ -34,16 +34,6 @@ import os
 BASE_DIR = Path(__file__).resolve().parent.parent
 print("Base dir is:",BASE_DIR)
 
-# factsheet=pd.read_json(os.path.join(BASE_DIR,r'apis/TestValues/factsheet.json'))
-# training_dataset=pd.read_csv(os.path.join(BASE_DIR,r'apis/TestValues/train.csv'))
-# test_dataset=pd.read_csv(os.path.join(BASE_DIR,r'apis/TestValues/test.csv'))
-# mappings1=pd.read_json(os.path.join(BASE_DIR,r'apis/MappingsWeightsMetrics/Mappings/Accountability/default.json'))
-# print("Mappings:",mappings1)
-# factsheet=pd.read_json(os.path.join('factsheet.json'))
-# training_dataset=pd.read_csv('train.csv')
-# test_dataset=pd.read_csv('test.csv')
-# mappings1=pd.read_json('default.json')
-
 # def normalization_score(model, train_data, test_data, factsheet, mappings):
 #     import numpy as np
 #     import collections
