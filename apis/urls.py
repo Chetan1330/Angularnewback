@@ -30,6 +30,8 @@ urlpatterns = [
     path('api/user',views.user.as_view()),
     path('api/user/<str:id>',views.user.as_view()),
     
+    path('api/dashboard/<str:id>',views.dashboard.as_view()),
+    
     path('api/solution',views.solution.as_view()),
     path('api/solution/<str:id>',views.solution.as_view()),
     
