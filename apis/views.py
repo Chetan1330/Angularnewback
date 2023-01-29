@@ -34,6 +34,16 @@ import os
 BASE_DIR = Path(__file__).resolve().parent.parent
 print("Base dir is:",BASE_DIR)
 
+# factsheet=pd.read_json(os.path.join(BASE_DIR,r'apis/TestValues/factsheet.json'))
+# training_dataset=pd.read_csv(os.path.join(BASE_DIR,r'apis/TestValues/train.csv'))
+# test_dataset=pd.read_csv(os.path.join(BASE_DIR,r'apis/TestValues/test.csv'))
+# mappings1=pd.read_json(os.path.join(BASE_DIR,r'apis/MappingsWeightsMetrics/Mappings/Accountability/default.json'))
+# print("Mappings:",mappings1)
+# factsheet=pd.read_json(os.path.join('factsheet.json'))
+# training_dataset=pd.read_csv('train.csv')
+# test_dataset=pd.read_csv('test.csv')
+# mappings1=pd.read_json('default.json')
+
 # def normalization_score(model, train_data, test_data, factsheet, mappings):
 #     import numpy as np
 #     import collections
@@ -505,15 +515,24 @@ def get_final_score(model, train_data, test_data, config_weights, mappings_confi
 
             if str(pillar[1]['algorithm_class']) != 'nan':
                 algorithm_class= int(pillar[1]['algorithm_class'])*0.55
+                
 
             if str(pillar[1]['correlated_features']) != 'nan':
                 correlated_features= int(pillar[1]['correlated_features'])*0.15
+                
 
             if str(pillar[1]['model_size']) != 'nan':
                 model_size= int(pillar[1]['model_size'])*5
+                
 
             if str(pillar[1]['feature_relevance']) != 'nan':
                 feature_relevance= int(pillar[1]['feature_relevance'])*0.15
+                
+            
+            print("algorithm_class Score is:", algorithm_class)
+            print("correlated_features Score is:", correlated_features)
+            print("model_size Score is:", model_size)
+            print("feature_relevance Score is:", feature_relevance)
 
             explainability_score =  algorithm_class +  correlated_features + model_size + feature_relevance
             
@@ -1493,6 +1512,14 @@ class analyze(APIView):
 
                     if pillar[0] == 'fairness':
                         # print("Pillar fairness is:", pillar[1])
+                        uploaddic['underfitting'] = int(pillar[1]['underfitting'])
+                        uploaddic['overfitting'] = int(pillar[1]['overfitting'])
+                        uploaddic['statistical_parity_difference'] = int(pillar[1]['statistical_parity_difference'])
+                        uploaddic['equal_opportunity_difference'] = int(pillar[1]['equal_opportunity_difference'])
+                        uploaddic['average_odds_difference'] = int(pillar[1]['average_odds_difference'])
+                        uploaddic['disparate_impact'] = int(pillar[1]['disparate_impact'])
+                        uploaddic['class_balance'] = int(pillar[1]['class_balance'])
+
                         fairness_score = int(pillar[1]['underfitting'])*0.35 +  int(pillar[1]['overfitting'])*0.15 
                         + int(pillar[1]['statistical_parity_difference'])*0.15 + int(pillar[1]['equal_opportunity_difference'])*0.2
                         + int(pillar[1]['average_odds_difference'])*0.1 + int(pillar[1]['disparate_impact'])*0.1 
@@ -1522,6 +1549,10 @@ class analyze(APIView):
 
                         explainability_score =  algorithm_class +  correlated_features + model_size + feature_relevance
                         
+                        uploaddic['algorithm_class'] = algorithm_class
+                        uploaddic['correlated_features'] = correlated_features
+                        uploaddic['model_size'] = model_size
+                        uploaddic['feature_relevance'] = feature_relevance
                         uploaddic['explainability_score'] = explainability_score
                         print("explainability Score is:", explainability_score)
 
@@ -1559,6 +1590,13 @@ class analyze(APIView):
 
                         robustness_score =  confidence_score +  clique_method + loss_sensitivity + clever_score + er_fast_gradient_attack + er_carlini_wagner_attack + er_deepfool_attack
                         
+                        uploaddic['confidence_score'] = confidence_score
+                        uploaddic['clique_method'] = clique_method
+                        uploaddic['loss_sensitivity'] = loss_sensitivity
+                        uploaddic['clever_score'] = clever_score
+                        uploaddic['er_fast_gradient_attack'] = er_fast_gradient_attack
+                        uploaddic['er_carlini_wagner_attack'] = er_carlini_wagner_attack
+                        uploaddic['er_deepfool_attack'] = er_deepfool_attack
                         uploaddic['robustness_score'] = robustness_score
                         print("robustness Score is:", robustness_score)
 
@@ -1588,6 +1626,11 @@ class analyze(APIView):
 
                         methodology_score =  normalization +  missing_data + regularization + train_test_split + factsheet_completeness
                         
+                        uploaddic['normalization'] = normalization
+                        uploaddic['missing_data'] = missing_data
+                        uploaddic['regularization'] = regularization
+                        uploaddic['train_test_split'] = train_test_split
+                        uploaddic['factsheet_completeness'] = factsheet_completeness
                         uploaddic['methodology_score'] = methodology_score
                         print("methodology Score is:", methodology_score)
 
@@ -1976,6 +2019,14 @@ class compare(APIView):
 
                     if pillar[0] == 'fairness':
                         # print("Pillar fairness is:", pillar[1])
+                        uploaddic['underfitting'] = int(pillar[1]['underfitting'])
+                        uploaddic['overfitting'] = int(pillar[1]['overfitting'])
+                        uploaddic['statistical_parity_difference'] = int(pillar[1]['statistical_parity_difference'])
+                        uploaddic['equal_opportunity_difference'] = int(pillar[1]['equal_opportunity_difference'])
+                        uploaddic['average_odds_difference'] = int(pillar[1]['average_odds_difference'])
+                        uploaddic['disparate_impact'] = int(pillar[1]['disparate_impact'])
+                        uploaddic['class_balance'] = int(pillar[1]['class_balance'])
+
                         fairness_score = int(pillar[1]['underfitting'])*0.35 +  int(pillar[1]['overfitting'])*0.15 
                         + int(pillar[1]['statistical_parity_difference'])*0.15 + int(pillar[1]['equal_opportunity_difference'])*0.2
                         + int(pillar[1]['average_odds_difference'])*0.1 + int(pillar[1]['disparate_impact'])*0.1 
@@ -2005,6 +2056,10 @@ class compare(APIView):
 
                         explainability_score =  algorithm_class +  correlated_features + model_size + feature_relevance
                         
+                        uploaddic['algorithm_class'] = algorithm_class
+                        uploaddic['correlated_features'] = correlated_features
+                        uploaddic['model_size'] = model_size
+                        uploaddic['feature_relevance'] = feature_relevance
                         uploaddic['explainability_score1'] = explainability_score
                         print("explainability Score is:", explainability_score)
 
@@ -2042,6 +2097,13 @@ class compare(APIView):
 
                         robustness_score =  confidence_score +  clique_method + loss_sensitivity + clever_score + er_fast_gradient_attack + er_carlini_wagner_attack + er_deepfool_attack
                         
+                        uploaddic['confidence_score'] = confidence_score
+                        uploaddic['clique_method'] = clique_method
+                        uploaddic['loss_sensitivity'] = loss_sensitivity
+                        uploaddic['clever_score'] = clever_score
+                        uploaddic['er_fast_gradient_attack'] = er_fast_gradient_attack
+                        uploaddic['er_carlini_wagner_attack'] = er_carlini_wagner_attack
+                        uploaddic['er_deepfool_attack'] = er_deepfool_attack
                         uploaddic['robustness_score1'] = robustness_score
                         print("robustness Score is:", robustness_score)
 
@@ -2071,6 +2133,11 @@ class compare(APIView):
 
                         methodology_score =  normalization +  missing_data + regularization + train_test_split + factsheet_completeness
                         
+                        uploaddic['normalization'] = normalization
+                        uploaddic['missing_data'] = missing_data
+                        uploaddic['regularization'] = regularization
+                        uploaddic['train_test_split'] = train_test_split
+                        uploaddic['factsheet_completeness'] = factsheet_completeness
                         uploaddic['methodology_score1'] = methodology_score
                         print("methodology Score is:", methodology_score)
 
@@ -2188,6 +2255,14 @@ class compare(APIView):
 
                     if pillar[0] == 'fairness':
                         # print("Pillar fairness is:", pillar[1])
+                        uploaddic['underfitting2'] = int(pillar[1]['underfitting'])
+                        uploaddic['overfitting2'] = int(pillar[1]['overfitting'])
+                        uploaddic['statistical_parity_difference2'] = int(pillar[1]['statistical_parity_difference'])
+                        uploaddic['equal_opportunity_difference2'] = int(pillar[1]['equal_opportunity_difference'])
+                        uploaddic['average_odds_difference2'] = int(pillar[1]['average_odds_difference'])
+                        uploaddic['disparate_impact2'] = int(pillar[1]['disparate_impact'])
+                        uploaddic['class_balance2'] = int(pillar[1]['class_balance'])
+
                         fairness_score = int(pillar[1]['underfitting'])*0.35 +  int(pillar[1]['overfitting'])*0.15 
                         + int(pillar[1]['statistical_parity_difference'])*0.15 + int(pillar[1]['equal_opportunity_difference'])*0.2
                         + int(pillar[1]['average_odds_difference'])*0.1 + int(pillar[1]['disparate_impact'])*0.1 
@@ -2214,9 +2289,15 @@ class compare(APIView):
 
                         if str(pillar[1]['feature_relevance']) != 'nan':
                             feature_relevance= int(pillar[1]['feature_relevance'])*0.15
+                        
 
                         explainability_score =  algorithm_class +  correlated_features + model_size + feature_relevance
                         
+                        uploaddic['algorithm_class2'] = algorithm_class
+                        uploaddic['correlated_features2'] = correlated_features
+                        uploaddic['model_size2'] = model_size
+                        uploaddic['feature_relevance2'] = feature_relevance
+
                         uploaddic['explainability_score2'] = explainability_score
                         print("explainability Score is:", explainability_score)
 
@@ -2254,6 +2335,13 @@ class compare(APIView):
 
                         robustness_score =  confidence_score +  clique_method + loss_sensitivity + clever_score + er_fast_gradient_attack + er_carlini_wagner_attack + er_deepfool_attack
                         
+                        uploaddic['confidence_score2'] = confidence_score
+                        uploaddic['clique_method2'] = clique_method
+                        uploaddic['loss_sensitivity2'] = loss_sensitivity
+                        uploaddic['clever_score2'] = clever_score
+                        uploaddic['er_fast_gradient_attack2'] = er_fast_gradient_attack
+                        uploaddic['er_carlini_wagner_attack2'] = er_carlini_wagner_attack
+                        uploaddic['er_deepfool_attack2'] = er_deepfool_attack
                         uploaddic['robustness_score2'] = robustness_score
                         print("robustness Score is:", robustness_score)
 
@@ -2283,6 +2371,11 @@ class compare(APIView):
 
                         methodology_score =  normalization +  missing_data + regularization + train_test_split + factsheet_completeness
                         
+                        uploaddic['normalization2'] = normalization
+                        uploaddic['missing_data2'] = missing_data
+                        uploaddic['regularization2'] = regularization
+                        uploaddic['train_test_split2'] = train_test_split
+                        uploaddic['factsheet_completeness2'] = factsheet_completeness
                         uploaddic['methodology_score2'] = methodology_score
                         print("methodology Score is:", methodology_score)
 
