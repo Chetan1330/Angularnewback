@@ -1233,7 +1233,13 @@ class userpage(APIView):
         if userexist.is_admin == True:
             uploaddic['Admin'] = "Admin"
 
+            users = []
             userlist = ScenarioUser.objects.all()
+            for i in userlist:
+                print("Each object:", i.email)
+                users.append(i.email)
+            uploaddic['users'] = users
+            print("Users list:",users)
         else:
             uploaddic['Admin'] = "noad"
         # if userexist:
@@ -1269,22 +1275,41 @@ class userpage(APIView):
         # return Response("User not exist.... Created new")
     
     def post(self, request):
+        uploaddic = {}
         if request.data is not None:
             # # trainingdata=request.data['TrainnigDatafile']
             # # serializer=SolutionSerializer(data=request.data)
-            userexist = ScenarioUser.objects.get(user_id=request.data['Userid'])
-            fileupload = ScenarioSolution.objects.create(
-                user=userexist,
-                ScenarioName=request.data['SelectScenario'],
-                SolutionName=request.data['NameSolution'],
-                SolutionDescription=request.data['DescriptionSolution'],
-                TrainingFile=request.data['TrainingFile'],
-                TestFile=request.data['TesdtataFile'],
-                FactsheetFile=request.data['FactsheetFile'],
-                ModelFile=request.data['ModelFile'],
-                Targetcolumn=request.data['Targetcolumn']
-            )
-            fileupload.save()
+            userexist = ScenarioUser.objects.get(email=request.data['Useremail'])
+            scenario = userexist.Scenario.all()
+            scenarioobj = userexist.scenariosolution.all()
+            ScenarioName=[]
+            SolutionName=[]
+            
+            if scenario:
+                for i in scenario:
+                    print("Response data ScenarioName:", i.response_data['ScenarioName']),
+                       #print("Response data Description:", i.response_data['Description']),
+                       #print("Response data LinktoDataset:", i.response_data['LinktoDataset'])
+
+                    ScenarioName.append(str(i.response_data['ScenarioName']).split("['")[1].split("']")[0]),
+                        #LinktoDataset.append(str(i.response_data['LinktoDataset']).split("['")[1].split("']")[0]),
+                        #Description.append(str(i.response_data['Description']).split("['")[1].split("']")[0]),
+                    
+                    
+            uploaddic['ScenarioName'] = ScenarioName
+            
+            
+            if scenarioobj:
+                for i in scenarioobj:
+                    print("Solution is:",str(i.SolutionName))
+                    SolutionName.append(i.SolutionName)
+        #             # ModelLinks.append(str(i.response_data['ModelLinks']).split("['")[1].split("']")[0])
+        #             # LinktoDataset.append(str(i.response_data['LinktoDataset']).split("['")[1].split("']")[0])
+        #             # Description.append(str(i.response_data['Description']).split("['")[1].split("']")[0])
+
+        #     print("SolutionName",SolutionName)
+            uploaddic['SolutionName'] = SolutionName
+        
             ## for i in request.FILES.get['TrainnigDatafile']:
             ##     print("File i:",i)
             print("Received request.data request:",request.data)
@@ -1292,7 +1317,7 @@ class userpage(APIView):
             # print("Received SelectScenario request:",request.data['SelectScenario'])
             # print("Received TrainnigDatafile request:",request.data['TrainnigDatafile'])
             # print("Type of file:",type(request.data['file']))
-        return Response("Successfully add!")
+        return Response(uploaddic)
 
 
 

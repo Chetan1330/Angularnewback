@@ -36,6 +36,7 @@ urlpatterns = [
     path('api/solution/<str:id>',views.solution.as_view()),
     
     path('api/userpage/<str:id>',views.userpage.as_view()),
+    path('api/userpage',views.userpage.as_view()),
     
     path('api/analyze',views.analyze.as_view()),
     
