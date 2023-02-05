@@ -762,7 +762,8 @@ class user(APIView):
                 # return Response(message, status=status.HTTP_400_BAD_REQUEST)
             # CustomUser.objec
             print("User ID:",request.data['Userid'])
-            createuser = ScenarioUser.objects.create(user_id=request.data['Userid'], email=request.data['emailid'])
+            print("Email ID:",request.data['emailid'])
+            createuser = ScenarioUser.objects.create(user_id=request.data['Userid'], email=request.data['emailid'], is_admin = 0)
             createuser.save()
 
             uploaddic = {}
