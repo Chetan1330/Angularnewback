@@ -14,6 +14,8 @@ class CustomUser(AbstractUser):
 
 class ScenarioUser(models.Model):
     user_id = models.CharField(max_length=200, blank=True)
+    email = models.CharField(max_length=200, blank=True)
+    is_admin = models.BooleanField()
     
 class Scenario(models.Model):
     user=models.ForeignKey(ScenarioUser, on_delete=models.CASCADE, related_name='Scenario')
