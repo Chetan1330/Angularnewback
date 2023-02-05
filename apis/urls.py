@@ -35,6 +35,8 @@ urlpatterns = [
     path('api/solution',views.solution.as_view()),
     path('api/solution/<str:id>',views.solution.as_view()),
     
+    path('api/userpage/<str:id>',views.userpage.as_view()),
+    
     path('api/analyze',views.analyze.as_view()),
     
     path('api/compare',views.compare.as_view()),
